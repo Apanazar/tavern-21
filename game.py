@@ -32,7 +32,7 @@ SCROLL_WINDOW_WIDTH = 600
 SCROLL_WINDOW_HEIGHT = 50
 SCROLL_WINDOW_COLOR = (150, 150, 150)
 
-SCROLL_WINDOW_TEXT_WIN = """I saw this here about a couple of days ago..."""
+SCROLL_WINDOW_TEXT_WIN = """I have a story for you......"""
 SCROLL_WINDOW_TEXT_LOOSE = """If life were a deck of cards, then the casino would inevitably take away your tokens!"""
 
 BUTTON_COLOR = (200, 200, 200)
@@ -62,6 +62,7 @@ def get_random_enemy_sprite():
     else:
         return None
 
+
 def get_random_win_sprite():
     win_sprites_path = 'src/sprites/Journal'
     win_sprites = os.listdir(win_sprites_path)
@@ -70,6 +71,7 @@ def get_random_win_sprite():
         return os.path.join(win_sprites_path, random.choice(win_sprites))
     else:
         return None
+
 
 def get_next_enemy_sprite(enemy_sprite_path, wins):
     index = 0
@@ -107,6 +109,8 @@ class GameScene:
         self.last_wins = False
         self.ultra_win = False
 
+        self.open_cards = []
+
         self.player_money = 500
         self.enemy_money = 500
 
@@ -123,6 +127,7 @@ class GameScene:
         self.stand_button_rect = None
 
         self.current_bet = 0
+
 
     def run(self):
         while True:
@@ -157,12 +162,15 @@ class GameScene:
             pygame.display.flip()
             self.clock.tick(60)
 
+
     def quit_game(self):
         pygame.quit()
         sys.exit()
 
+
     def handle_resize(self, size):
         self.screen = pygame.display.set_mode(size, RESIZABLE)
+
 
     def handle_mouse_click(self, pos):
         if self.is_popup_visible:
@@ -179,11 +187,14 @@ class GameScene:
             elif self.bet_decrease_rect.collidepoint(pos):
                 self.current_bet = max(0, self.current_bet - 50)
 
+
     def show_popup(self):
         self.is_popup_visible = True
 
+
     def hide_popup(self):
         self.is_popup_visible = False
+
 
     def draw_popup(self):
         button_spacing = 20
@@ -203,6 +214,7 @@ class GameScene:
             self.screen.blit(text, text_rect)
 
             button_y += BUTTON_PAPER_HEIGHT + button_spacing
+
 
     def handle_popup_click(self, pos):
         button_width = 200
@@ -226,6 +238,7 @@ class GameScene:
 
             button_y += button_height + button_spacing
 
+
     @staticmethod
     def text_wrap(text, font, max_width):
         words = text.split(' ')
@@ -243,6 +256,7 @@ class GameScene:
             lines.append(' '.join(current_line))
         return lines
 
+
     def draw_money(self):
         player_text = self.font.render("Player Money: " + str(self.player_money), True, (255, 255, 255))
         player_text_rect = player_text.get_rect(topleft=(10, INITIAL_HEIGHT - 700))
@@ -252,6 +266,7 @@ class GameScene:
         enemy_text_rect = enemy_text.get_rect(topleft=(10, player_text_rect.bottom + 20))
         self.screen.blit(enemy_text, enemy_text_rect)
 
+
     def draw_win_result(self, win_text, scroll_text):
         button_paper = pygame.image.load(BUTTON_PAPER_PATH)
         button_paper = pygame.transform.scale(button_paper, (100, 40))
@@ -260,7 +275,8 @@ class GameScene:
         win_text_rect = win_text_surface.get_rect(center=(INITIAL_WIDTH / 2, INITIAL_HEIGHT / 2))
         self.screen.blit(win_text_surface, win_text_rect)
 
-        scroll_text_surface = self.small_font.render(scroll_text, True, (255, 255, 255))
+        font = pygame.font.Font(None, 30)
+        scroll_text_surface = font.render(scroll_text, True, (255, 255, 255))
         scroll_text_rect = scroll_text_surface.get_rect(center=(INITIAL_WIDTH / 2, INITIAL_HEIGHT - 100))
         self.screen.blit(scroll_text_surface, scroll_text_rect)
 
@@ -274,20 +290,25 @@ class GameScene:
         if next_button_rect.collidepoint(pygame.mouse.get_pos()):
             self.restart_game()
 
+
     def draw_result(self):
+        f = open('src/journal.txt', 'w')
         if self.enemy_money <= 0:
             if "_m_" in self.enemy_image_path:
                 self.draw_win_result("Player Win!", SCROLL_WINDOW_TEXT_WIN)
                 self.win_image_path = get_random_win_sprite()
+                
+                f.write(self.win_image_path + '\n')
+                f.close()
+
                 self.screen.blit(self.win_image, self.win_rect)
             else:
                 self.draw_win_result("Player Win!", "    ")
-        
         elif self.player_money <= 0:
             if "_m_" in self.enemy_image_path:
                 self.draw_win_result("Player lost...", SCROLL_WINDOW_TEXT_LOOSE)
             else:
-                self.draw_win_result("Player lost...", "    ")
+                self.draw_win_result("Player lost...", "Don't worry, bunny, I think you got what you wanted")
         else:
             player_result_text = self.font.render("Player Result: " + str(self.get_cards_value(self.player_cards)), True, (255, 255, 255))
             player_result_rect = player_result_text.get_rect(topleft=(10, INITIAL_HEIGHT - 160))
@@ -302,37 +323,47 @@ class GameScene:
             result_rect = result_text_surface.get_rect(center=(INITIAL_WIDTH / 2, INITIAL_HEIGHT / 2))
             self.screen.blit(result_text_surface, result_rect)
 
-    def get_game_result_text(self):
-        if self.get_cards_value(self.player_cards) > 21:
-            self.last_wins = False
-            return "Player Bust! Enemy Wins!", (255, 255, 255)
-        elif self.get_cards_value(self.enemy_cards) > 21:
-            self.last_wins = True
-            if "_g_" in self.enemy_image_path:
-                self.enemy_image_path = get_next_enemy_sprite(self.enemy_image_path, self.wins)
-                self.enemy_image = pygame.transform.scale(pygame.image.load(self.enemy_image_path), ENEMY_SIZE)
-                self.screen.blit(self.enemy_image, self.enemy_rect)
-            else:
-                pass
-        
-            return "Enemy Bust! Player Wins!", (255, 255, 255)
-        elif self.get_cards_value(self.player_cards) > self.get_cards_value(self.enemy_cards):
-            self.last_wins = True
-            if "_g_" in self.enemy_image_path:
-                self.enemy_image_path = get_next_enemy_sprite(self.enemy_image_path, self.wins)
-                self.enemy_image = pygame.transform.scale(pygame.image.load(self.enemy_image_path), ENEMY_SIZE)
-                self.screen.blit(self.enemy_image, self.enemy_rect)
-            else:
-                pass
 
-            return "Player Wins!", (255, 255, 255)
-        elif self.get_cards_value(self.enemy_cards) > self.get_cards_value(self.player_cards):
-            self.last_wins = False
-            return "Enemy Wins!", (255, 255, 255)
-        else: 
+    def get_game_result_text(self):
+        player_value = self.get_cards_value(self.player_cards)
+        enemy_value = self.get_cards_value(self.enemy_cards)
+    
+        if player_value > 21 and enemy_value > 21:
             self.last_wins = False
             return "Draw!", (255, 255, 255)
-
+        elif player_value > 21:
+            self.last_wins = True
+            if "_g_" in self.enemy_image_path:
+                self.enemy_image_path = get_next_enemy_sprite(self.enemy_image_path, self.wins)
+                self.enemy_image = pygame.transform.scale(pygame.image.load(self.enemy_image_path), ENEMY_SIZE)
+                self.enemy_image.get_rect(center=(INITIAL_WIDTH / 2, INITIAL_HEIGHT / 4 + 120))
+            else:
+                pass
+            return "Player Wins!", (255, 255, 255)
+        elif enemy_value > 21:
+            self.last_wins = True
+            if "_g_" in self.enemy_image_path:
+                self.enemy_image_path = get_next_enemy_sprite(self.enemy_image_path, self.wins)
+                self.enemy_image = pygame.transform.scale(pygame.image.load(self.enemy_image_path), ENEMY_SIZE)
+                self.enemy_image.get_rect(center=(INITIAL_WIDTH / 2, INITIAL_HEIGHT / 4 + 120))
+            else:
+                pass
+            return "Player Wins!", (255, 255, 255)
+        elif player_value > enemy_value:
+            self.last_wins = True
+            if "_g_" in self.enemy_image_path:
+                self.enemy_image_path = get_next_enemy_sprite(self.enemy_image_path, self.wins)
+                self.enemy_image = pygame.transform.scale(pygame.image.load(self.enemy_image_path), ENEMY_SIZE)
+                self.enemy_image.get_rect(center=(INITIAL_WIDTH / 2, INITIAL_HEIGHT / 4 + 120))
+            else:
+                pass
+            return "Player Wins!", (255, 255, 255)
+        elif player_value < enemy_value:
+            self.last_wins = False
+            return "Enemy Wins!", (255, 255, 255)
+        else:
+            self.last_wins = False
+            return "Draw!", (255, 255, 255)
 
 
     def draw_game(self):
@@ -350,7 +381,7 @@ class GameScene:
         take_button_rect = take_button_text.get_rect(center=self.take_button_rect.center)
         self.screen.blit(take_button_text, take_button_rect)
 
-        self.stand_button_rect = pygame.Rect(INITIAL_WIDTH - 220, INITIAL_HEIGHT - 190, BUTTON_WIDTH, BUTTON_HEIGHT)
+        self.stand_button_rect = pygame.Rect(INITIAL_WIDTH - 220, INITIAL_HEIGHT - 170, BUTTON_WIDTH, BUTTON_HEIGHT)
         button_paper = pygame.image.load(BUTTON_WOOD_PATH)
         button_paper = pygame.transform.scale(button_paper, (BUTTON_WIDTH, BUTTON_HEIGHT))
         self.screen.blit(button_paper, (self.stand_button_rect.x, self.stand_button_rect.y))
@@ -359,11 +390,11 @@ class GameScene:
         stand_button_rect = stand_button_text.get_rect(center=self.stand_button_rect.center)
         self.screen.blit(stand_button_text, stand_button_rect)
 
-        current_bet_text = self.font.render("Current Bet: " + str(self.current_bet), True, (255, 255, 255))
-        current_bet_rect = current_bet_text.get_rect(topright=(INITIAL_WIDTH - 10, 10))
+        current_bet_text = self.font.render("Bet: " + str(self.current_bet), True, (255, 255, 255))
+        current_bet_rect = current_bet_text.get_rect(topright=(INITIAL_WIDTH - 60, 30))
         self.screen.blit(current_bet_text, current_bet_rect)
 
-        bet_increase_button_rect = pygame.Rect(INITIAL_WIDTH - 50, 40, 40, 40)
+        bet_increase_button_rect = pygame.Rect(INITIAL_WIDTH - 50, 20, 40, 40)
         button_paper = pygame.image.load(BUTTON_WOOD_PATH)
         button_paper = pygame.transform.scale(button_paper, (40, 40))
         self.screen.blit(button_paper, (bet_increase_button_rect.x, bet_increase_button_rect.y))
@@ -373,15 +404,14 @@ class GameScene:
         self.screen.blit(bet_increase_text, bet_increase_text_rect)
         self.bet_increase_rect = bet_increase_button_rect
 
-        bet_decrease_button_rect = pygame.Rect(INITIAL_WIDTH - 145, 40, 40, 40)
-        button_paper = pygame.image.load(BUTTON_WOOD_PATH)
-        button_paper = pygame.transform.scale(button_paper, (40, 40))
+        bet_decrease_button_rect = pygame.Rect(INITIAL_WIDTH - 190, 20, 40, 40)
         self.screen.blit(button_paper, (bet_decrease_button_rect.x, bet_decrease_button_rect.y))
 
         bet_decrease_text = self.small_font.render("-", True, (255, 255, 255))
         bet_decrease_text_rect = bet_decrease_text.get_rect(center=bet_decrease_button_rect.center)
         self.screen.blit(bet_decrease_text, bet_decrease_text_rect)
         self.bet_decrease_rect = bet_decrease_button_rect
+
 
     def draw_player_cards(self):
         player_cards_rect = pygame.Rect(50, INITIAL_HEIGHT - 170, 130, 160)
@@ -393,60 +423,62 @@ class GameScene:
             self.screen.blit(card_image, (player_cards_rect.left + x_offset, player_cards_rect.top + 20))
             x_offset += 30
 
+
     def draw_enemy_cards(self):
         enemy_cards_rect = pygame.Rect(500, 550, 130, 160)
 
+        #######self###########
         x_offset = 10
-        for card in self.enemy_cards:
+        for self.card in self.enemy_cards:
             card_image = pygame.image.load(CARD_BACK_IMAGE_PATH)
             card_image = pygame.transform.scale(card_image, CARD_SIZE)
             self.screen.blit(card_image, (enemy_cards_rect.left + x_offset, enemy_cards_rect.top + 20))
             x_offset += 30
 
+
     def take_card(self):
         card = random.choice(CARD_SPRITES)
         self.player_cards.append(card)
-        self.enemy_cards.append(random.choice(CARD_SPRITES))
 
-    def stand(self):
-        while self.get_cards_value(self.enemy_cards) < 17:
+        enemy_value = self.get_cards_value(self.enemy_cards)
+        if enemy_value < 17:
             card = random.choice(CARD_SPRITES)
             self.enemy_cards.append(card)
 
-        #self.player_money -= self.current_bet
-        #self.enemy_money -= self.current_bet
 
-        if self.get_cards_value(self.player_cards) > self.get_cards_value(self.enemy_cards) or self.get_cards_value(self.enemy_cards) > 21:
-            self.player_money += self.current_bet
-            self.enemy_money -= self.current_bet
-        elif self.get_cards_value(self.enemy_cards) > self.get_cards_value(self.player_cards) or self.get_cards_value(self.player_cards) > 21:
+    def stand(self):
+        player_value = self.get_cards_value(self.player_cards)
+        enemy_value = self.get_cards_value(self.enemy_cards)
+    
+        if player_value > 21 and enemy_value > 21:
+            pass
+        elif player_value > 21:
             self.player_money -= self.current_bet
             self.enemy_money += self.current_bet
-        else:
+        elif enemy_value > 21:
             self.player_money += self.current_bet
-
-        
+            self.enemy_money -= self.current_bet
+        else:
+            if player_value > enemy_value:
+                self.player_money += self.current_bet
+                self.enemy_money -= self.current_bet
+            elif player_value < enemy_value:
+                self.player_money -= self.current_bet
+                self.enemy_money += self.current_bet
+    
         if self.last_wins:
             if self.wins == 3:
                 pass
             else: 
                 self.wins = min(max(self.wins + 1, 1), 3)
-            
-            #if self.enemy_image_path.find("_g_"):
-            #    self.enemy_image_path = get_next_enemy_sprite(self.enemy_image_path, self.wins)
-            #else:
-            #    pass
-                    
-            #self.enemy_image = pygame.transform.scale(pygame.image.load(self.enemy_image_path), ENEMY_SIZE)
-            #self.screen.blit(self.enemy_image, self.enemy_rect)
         else:
             pass
-
+        
         self.is_result_visible = True
+
 
     def get_cards_value(self, cards):
         total_value = 0
-        ace_count = 0
 
         for card in cards:
             rank = card.split("-")[-1].split(".")[0]
@@ -456,16 +488,10 @@ class GameScene:
             elif rank in ["K", "Q", "J"]:
                 total_value += 10
             elif rank == "A":
-                ace_count += 1
-
-        for _ in range(ace_count):
-            if total_value + 11 <= 21:
                 total_value += 11
-            else:
-                total_value += 1
-
 
         return total_value
+
 
     def hide_result(self):
         self.is_result_visible = False
@@ -476,13 +502,12 @@ class GameScene:
         self.take_button_rect = None
         self.stand_button_rect = None
 
+
     def restart_game(self):
         self.hide_result()
 
         self.wins = 1
         self.win_image_path = get_random_win_sprite()
-        #self.win_image = pygame.transform.scale(pygame.image.load(self.win_image_path), ENEMY_SIZE)
-        #self.win_rect = self.win_image.get_rect(center=(INITIAL_WIDTH / 2, INITIAL_HEIGHT / 4 + 120))
 
         self.enemy_image_path = get_random_enemy_sprite()
         self.enemy_image = pygame.transform.scale(pygame.image.load(self.enemy_image_path), ENEMY_SIZE)
