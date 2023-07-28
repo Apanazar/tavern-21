@@ -92,23 +92,50 @@ class JournalMenu:
         self.background = pygame.image.load(SPRITE_PATH)
         self.background = pygame.transform.scale(self.background, (INITIAL_WIDTH, INITIAL_HEIGHT))
         self.sprites = []
+        self.sprite_files = []
         self.load_sprites()
+
+        self.selected_sprite_path = None
+        self.LoremIpsumText = " "
 
         self.buttons = []
         self.buttons.append(Menu("Back", INITIAL_WIDTH - BUTTON_WIDTH - BUTTON_SPACING - 75, INITIAL_HEIGHT - 90 - BUTTON_HEIGHT - BUTTON_SPACING))
 
+
     def load_sprites(self):
         sprite_folder = 'src/sprites/Journal'
-        sprite_files = os.listdir(sprite_folder)
-        sprite_files = [file for file in sprite_files if file.endswith('.png')]
 
-        for i, sprite_file in enumerate(sprite_files):
+        with open('src/journal.txt', 'r') as f:
+            self.sprite_files = [line.strip().replace("src/sprites/Journal/", "") for line in f]
+
+        for i, sprite_file in enumerate(self.sprite_files):
             sprite_path = os.path.join(sprite_folder, sprite_file)
             sprite = pygame.image.load(sprite_path)
             sprite = pygame.transform.scale(sprite, (200, 200))
             x = 100 + (i % 2) * 200 + 20
             y = 200 + (i // 2) * 200 - 100
             self.sprites.append((sprite, (x, y)))
+
+
+    def wrap_text(self, font, text, max_width):
+        words = text.split(' ')
+        wrapped_text = ''
+        accumulated_width = 0
+        word_count = 0
+
+        for word in words:
+            word_width = font.size(word)[0]
+
+            if accumulated_width + word_width > max_width or word_count >= 6:
+                wrapped_text += '\n'
+                accumulated_width = 0
+                word_count = 0
+
+            wrapped_text += word + ' '
+            accumulated_width += word_width
+            word_count += 1
+
+        return wrapped_text.strip()
 
     def draw(self, surface):
         surface.blit(self.background, (0, 0))
@@ -119,6 +146,33 @@ class JournalMenu:
         for button in self.buttons:
             button.draw(surface)
 
+        font = pygame.font.Font(None, 26)
+        max_width = 700
+        wrapped_text = self.wrap_text(font, self.LoremIpsumText, max_width)
+        lines = wrapped_text.split('\n')
+        line_height = font.get_linesize()
+
+        for i, line in enumerate(lines):
+            text_surface = font.render(line, True, (32, 60, 86))
+            text_rect = text_surface.get_rect(midtop=(INITIAL_WIDTH - 330, 100 + i * line_height))
+            surface.blit(text_surface, text_rect)
+
+
+    def handle_click(self, event):
+        if event.type == MOUSEBUTTONDOWN and event.button == 1:
+            for i, (sprite, pos) in enumerate(self.sprites):
+                sprite_rect = sprite.get_rect(topleft=pos)
+                if sprite_rect.collidepoint(event.pos):
+                    
+                    if self.sprite_files[i] == "victory_1.png":
+                        self.LoremIpsumText = """Isabel\n\nThere have been rumors in our church village for a long time that one of the nuns got into the church walls far from religious aspirations. Isabel is a homeless nymphomaniac, and the Holy Father sheltered her after the fire in Ipswich. Until yesterday, I didn't believe the rumors until I saw with my own eyes how she bared her breasts in the sun in one of the church windows. They sparkled, were smooth and ... How can such a blasphemer with such... big ones... is in the church!?"""
+                    elif self.sprite_files[i] == "victory_2.png":
+                        self.LoremIpsumText = """Barbara\n\nI've never met a more beautiful girl than her. I served in the ranks of the Imperial Legionnaires during the Armistice War. We didn't know who she was or where she came from, but we only knew her name. Barbara... she fought harder than some men, although physically inferior to them. All because of her will and aspirations, she probably had to go through a lot, since such a passion leads her into battle. Outside of the fight, she inspired us... with her elastic ass and the ability to do a great blowjob. Sometimes she did it with several men at once. I wish I knew her fate now..."""
+                    elif self.sprite_files[i] == "victory_3.png":
+                        self.LoremIpsumText = """Cindy\n\nYou know... don't look at my empty pockets, because once I was much richer. Mrs. Cindy Bancroft made me famous and rich. Don't think about it, I wasn't begging for money. One day she invited me to her county to paint her picture. A masterpiece! I still remember with a spark in my mind her smooth legs, neat soft ass and perfect figure. Of course, I embellished some details in my painting, but the lady was very pleased. This is one of my best and most profitable jobs. Well, where did I put all the money? Of course for inspiration! Sweet ale warms my creative soul."""
+
+                    break
+
 
 def run():
     pygame.init()
@@ -128,6 +182,9 @@ def run():
     sprite = pygame.image.load(SPRITE_PATH)
     logo_sprite = pygame.image.load(LOGO_PATH)
     logo_sprite = pygame.transform.scale(logo_sprite, (300, 450))
+
+    ico = pygame.image.load("src/sprites/ava.png")
+    pygame.display.set_icon(ico)
 
     menu_buttons = []
     menu_buttons.append(Menu("New game", (INITIAL_WIDTH - BUTTON_WIDTH) / 2 + 300, INITIAL_HEIGHT / 2 - BUTTON_HEIGHT - BUTTON_SPACING - 130))
@@ -163,23 +220,27 @@ def run():
                                 game_scene.run()
                             elif button.text == "Settings":
                                 current_menu = "Settings"
-                                screen.fill((0, 0, 0))  # Clear the screen for the new menu
+                                screen.fill((0, 0, 0))  
                             elif button.text == "Journal":
                                 current_menu = "Journal"
-                                screen.fill((0, 0, 0))  # Clear the screen for the new menu
+                                screen.fill((0, 0, 0))  
 
             elif current_menu == "Settings":
                 new_menu = settings_menu.handle_click(event)
                 if new_menu is not None:
                     current_menu = new_menu
-                    screen.fill((0, 0, 0))  # Clear the screen for the new menu
+                    screen.fill((0, 0, 0))
 
             elif current_menu == "Journal":
                 if event.type == MOUSEBUTTONDOWN and event.button == 1:
                     for button in journal_menu.buttons:
                         if button.rect.collidepoint(event.pos) and button.text == "Back":
+                            journal_menu.LoremIpsumText = ""
                             current_menu = "Menu"
-                            screen.fill((0, 0, 0))  # Clear the screen for the new menu
+                            screen.fill((0, 0, 0))
+
+                    journal_menu.handle_click(event)
+
 
         if current_menu == "Menu":
             screen.fill((0, 0, 0))
